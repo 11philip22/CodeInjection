@@ -189,36 +189,6 @@ BOOL IsAlertable(HANDLE hProcess, HANDLE hThread, LPVOID lpAddr[6]) {
     return bAlertable;
 }
 
-// thread to run alertable functions
-DWORD WINAPI ThreadProc(LPVOID lpParameter) {
-    HANDLE*          evt = (HANDLE)lpParameter;
-    HANDLE           hPort;
-    OVERLAPPED_ENTRY lap;
-    DWORD            dwNumEntriesRemoved;
-
-    SleepEx(INFINITE, TRUE);
-
-    WaitForSingleObjectEx(evt[0], INFINITE, TRUE);
-
-    WaitForMultipleObjectsEx(2, evt, FALSE, INFINITE, TRUE);
-
-    SignalObjectAndWait(evt[1], evt[0], INFINITE, TRUE);
-
-    ResetEvent(evt[0]);
-    ResetEvent(evt[1]);
-
-    MsgWaitForMultipleObjectsEx(2, evt,
-        INFINITE, QS_RAWINPUT, MWMO_ALERTABLE);
-
-    hPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
-    if (hPort) {
-        GetQueuedCompletionStatusEx(hPort, &lap, 1, &dwNumEntriesRemoved, INFINITE, TRUE);
-        CloseHandle(hPort);
-    }
-
-    return 0;
-}
-
 HANDLE FindAlertableThread(HANDLE hProcess, DWORD dwPid) {
     HANDLE        hSnapshot, hTread, hEvent[2], hReturn = NULL;
     LPVOID        pSetEvent, f[6];
@@ -229,7 +199,6 @@ HANDLE FindAlertableThread(HANDLE hProcess, DWORD dwPid) {
 
     // using the offset requires less code but it may
     // not work across all systems.
-#ifdef USE_OFFSET
     PCHAR api[6] = {
       "ZwDelayExecution",
       "ZwWaitForSingleObject",
@@ -243,50 +212,6 @@ HANDLE FindAlertableThread(HANDLE hProcess, DWORD dwPid) {
         hModule = GetModuleHandle(i == 4 ? L"win32u" : L"ntdll");
         f[i] = (LPBYTE)GetProcAddress(hModule, api[i]) + 0x14;
     }
-#else
-    // create thread to execute alertable functions
-    hEvent[0] = CreateEvent(NULL, FALSE, FALSE, NULL);
-    hEvent[1] = CreateEvent(NULL, FALSE, FALSE, NULL);
-    hTread = CreateThread(NULL, 0, ThreadProc, hEvent, 0, NULL);
-    if (!hTread) {
-        return INVALID_HANDLE_VALUE;
-    }
-
-    // wait a moment for thread to initialize
-    Sleep(100);
-
-    // resolve address of SetEvent
-    hModule = GetModuleHandle(L"kernel32.dll");
-    if (hModule) {
-        pSetEvent = GetProcAddress(hModule, "SetEvent");
-        FreeLibrary(hModule);
-    }
-    else {
-        return INVALID_HANDLE_VALUE;
-    }
-
-    // for each alertable function
-    for (i = 0; i < 6; i++) {
-        // read the thread context
-        context.ContextFlags = CONTEXT_CONTROL;
-        GetThreadContext(hTread, &context);
-        // save address
-        f[i] = (LPVOID)context.Rip;
-        // queue SetEvent for next function
-        QueueUserAPC(pSetEvent, hTread, (ULONG_PTR)hEvent);
-    }
-    
-    // cleanup thread
-    if (hTread) {
-        CloseHandle(hTread);
-    }
-    if (hEvent[0]) {
-        CloseHandle(hEvent[0]);
-    }
-    if (hEvent[1]) {
-        CloseHandle(hEvent[1]);
-    }
-#endif
 
     // Create a snapshot of threads
     hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
