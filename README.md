@@ -4,6 +4,7 @@
 ### This code works on my machine @ 22-06-2021
 Injects shellcode using NtCreateSection, NtMapViewOfSection and RtlCreateUserThread.  
 #### Explanation
+Create `notepad.exe` as host process to run our shellcode in.  
 Create a new memory section with RWX protection using `NtCreateSection`.  
 Map a view of the created section to the local process with RW protection using `NtMapViewOfSection`.
 Map a view of the created section to a remote target process with RX protection using `NtMapViewOfSection`.  
