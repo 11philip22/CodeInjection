@@ -19,7 +19,7 @@ https://www.ired.team/offensive-security/code-injection-process-injection/ntcrea
 Find the PID of `explorer.exe`.  
 Allocate memory in explorer.exe process memory space.  
 Write shellcode to that memory location.  
-Find an alertable thread.  
+Find an alertable thread by reading the context of a remote thread and examining the control and integer registers more details on Modexp's blog.  
 Queue an APC at alertable thread. APC points to the shellcode
 #### References
 https://modexp.wordpress.com/2019/08/27/process-injection-apc/  
