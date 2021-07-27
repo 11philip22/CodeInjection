@@ -3,6 +3,7 @@
 ## SectionInjection
 ### This code works on my machine @ 22-06-2021
 Injects shellcode using NtCreateSection, NtMapViewOfSection and RtlCreateUserThread.  
+http://phasetw0.com/section-code-injection/
 #### Explanation
 Create `notepad.exe` as host process to run our shellcode in.  
 Create a new memory section with RWX protection using `NtCreateSection`.  
